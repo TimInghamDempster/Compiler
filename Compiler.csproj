@@ -51,7 +51,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Virutal Machine\Virutal Machine.csproj">
+    <ProjectReference Include="..\..\Virutal Machine\Virutal Machine.csproj">
       <Project>{85568f1b-3d33-4875-8980-97edc94de147}</Project>
       <Name>Virutal Machine</Name>
     </ProjectReference>

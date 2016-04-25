@@ -20,7 +20,7 @@ namespace Compiler
 	class Token
 	{
 		public TokenType type;
-		public char data;
+		public string data;
 	}
 
 	class Lexer
@@ -55,7 +55,7 @@ namespace Compiler
 						int temp;
 						if(int.TryParse(input[i].ToString(), out temp))
 						{
-							tokens.Add(new Token() { type = TokenType.Integer, data = input[i] });
+							tokens.Add(new Token() { type = TokenType.Integer, data = input[i].ToString() });
 						}
 						break;
 				}

@@ -14,11 +14,12 @@ namespace Compiler
 
 		static void Main(string[] args)
 		{
-			string code = "1 + 3*5+7/2";
+			string code = "1 + 3*5+(7/(2+3))";
 
 			List<Token> tokenStream = m_lexer.Lex(code);
 
-			SyntaxNode abstractSyntaxTree = m_parser.Parse(tokenStream);
+			SyntaxNode abstractSyntaxTree = new SyntaxNode();
+			bool parsed = m_parser.Parse(tokenStream, abstractSyntaxTree);
 
 			m_codeGenerator.GenerateCode(abstractSyntaxTree, @"MainDrive");
 

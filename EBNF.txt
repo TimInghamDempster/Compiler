@@ -1,0 +1,5 @@
+Program ==> Expression
+Expression ==> Primitive {BinaryOperator Primitive}
+Primitive ==> Integer | OpenParenthesis Expression CloseParenthesis | UnaryOperator Primitive
+BinaryOperator ==> Plus | Minus | Multiply | Divide
+UnaryOperator ==> Minus
