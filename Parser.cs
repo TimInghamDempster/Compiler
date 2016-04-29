@@ -151,9 +151,15 @@ namespace Compiler
 			if(m_currentToken.type == TokenType.Minus)
 			{
 				SyntaxNode minusNode = new SyntaxNode();
-				minusNode.m_type = ASTType.BinaryMinus;
+				minusNode.m_type = ASTType.UnaryMinus;
 				parent.m_children.Add(minusNode);
 				AdvanceToken();
+				
+				if(!ParsePrimitive(minusNode))
+				{
+					Console.WriteLine("Error: Unary minus with no argument");
+				}
+				
 				return true;
 			}
 			return false;

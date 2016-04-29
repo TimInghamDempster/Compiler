@@ -14,7 +14,7 @@ namespace Compiler
 
 		static void Main(string[] args)
 		{
-			string code = "1 + 3*5+(7/(2+3))";
+			string code = "9 + 3*5+(7/(2+1)) * -2";
 
 			List<Token> tokenStream = m_lexer.Lex(code);
 
@@ -23,7 +23,7 @@ namespace Compiler
 
 			m_codeGenerator.GenerateCode(abstractSyntaxTree, @"MainDrive");
 
-			System.Diagnostics.Process proc = System.Diagnostics.Process.Start(@"..\..\..\Virutal Machine\bin\Release\Virutal Machine.exe");
+			System.Diagnostics.Process proc = System.Diagnostics.Process.Start(@"..\..\..\..\Virutal Machine\bin\Release\Virutal Machine.exe");
 		}
 	}
 }

@@ -8,25 +8,111 @@ namespace Compiler
 {
 	class CodeGenerator
 	{
+		List<int> m_codeStream = new List<int>();
+
 		public void GenerateCode(SyntaxNode abstractSyntaxTree, string storeDirectory)
 		{
-			List<int> codeStream = new List<int>();
+			m_codeStream = new List<int>();
 			
-			AddPostScript(ref codeStream);
-			WriteForBlockDevice(codeStream, storeDirectory);
+			GenerateExpression(abstractSyntaxTree.m_children[0]);
+
+			AddPostScript();
+			WriteForBlockDevice(storeDirectory);
 		}
 
-		void AddPostScript(ref List<int> codeStream)
+		void GenerateExpression(SyntaxNode  expressionNode)
+		{
+			GeneratePrimitive(expressionNode.m_children[0], 0);
+
+			for(int i = 1; i < expressionNode.m_children.Count; i += 2)
+			{
+				GeneratePrimitive(expressionNode.m_children[i + 1], 1);
+				GenerateBinaryOperator(expressionNode.m_children[i], 0, 1);
+			}
+		}
+
+		void GenerateBinaryOperator(SyntaxNode operatorNode, int targetRegister, int sourceRegister)
+		{
+			int instruction = targetRegister << 8 | targetRegister;
+			int argument = sourceRegister;
+
+			switch(operatorNode.m_type)
+			{
+			case ASTType.BinaryPlus:
+				instruction |= (int)Virtual_Machine.UnitCodes.ALU | (int)Virtual_Machine.ALUOperations.Add;
+				break;
+			case ASTType.BinaryMinus:
+				instruction |= (int)Virtual_Machine.UnitCodes.ALU | (int)Virtual_Machine.ALUOperations.Subtract;
+				break;
+			case ASTType.BinaryMul:
+				instruction |= (int)Virtual_Machine.UnitCodes.ALU | (int)Virtual_Machine.ALUOperations.Multiply;
+				break;
+			case ASTType.BinaryDiv:
+				instruction |= (int)Virtual_Machine.UnitCodes.ALU | (int)Virtual_Machine.ALUOperations.Divide;
+				break;
+			}
+
+			m_codeStream.Add(instruction);
+			m_codeStream.Add(argument);
+		}
+
+		void GenerateUnaryOperator(SyntaxNode unaryNode, int targetRegister)
+		{
+			GeneratePrimitive(unaryNode.m_children[0], targetRegister);
+		}
+
+		void GeneratePrimitive(SyntaxNode primitiveNode, int targetRegister)
+		{
+			
+			if(primitiveNode.m_data != null)
+			{
+				int val;
+				int.TryParse(primitiveNode.m_data, out val);
+
+				int instruction = (int)Virtual_Machine.UnitCodes.ALU | (int)Virtual_Machine.ALUOperations.SetLiteral | targetRegister << 8;
+
+				m_codeStream.Add(instruction);
+				m_codeStream.Add(val);
+			}
+			else if(primitiveNode.m_children.Count == 1)
+			{
+				if (primitiveNode.m_children[0].m_type == ASTType.UnaryMinus)
+				{
+					GenerateUnaryOperator(primitiveNode.m_children[0], targetRegister);
+
+					int negativeInstruction = (int)Virtual_Machine.UnitCodes.ALU | (int)Virtual_Machine.ALUOperations.MultiplyLiteral | targetRegister << 8 | targetRegister;
+					m_codeStream.Add(negativeInstruction);
+					m_codeStream.Add(-1);
+				}
+				else
+				{
+					int pushInstruction = (int)Virtual_Machine.UnitCodes.Stack | (int)Virtual_Machine.StackOperations.Push;
+					m_codeStream.Add(pushInstruction);
+					m_codeStream.Add(0);
+
+					GenerateExpression(primitiveNode.m_children[0]);
+					int copyInstruction = (int)Virtual_Machine.UnitCodes.ALU | (int)Virtual_Machine.ALUOperations.Copy | 1 << 8 | 0;
+					m_codeStream.Add(copyInstruction);
+					m_codeStream.Add(0);
+
+					int popInstruction = (int)Virtual_Machine.UnitCodes.Stack | (int)Virtual_Machine.StackOperations.Pop;
+					m_codeStream.Add(popInstruction);
+					m_codeStream.Add(0);
+				}
+			}
+		}
+
+		void AddPostScript()
 		{
 			List<int> postScript = new List<int>()
 			{
 				(int)Virtual_Machine.UnitCodes.Branch	|	(int)Virtual_Machine.BranchOperations.Break
 			};
 
-			codeStream = codeStream.Concat(postScript).ToList();
+			m_codeStream = m_codeStream.Concat(postScript).ToList();
 		}
 
-		void WriteForBlockDevice(List<int> codeStream, string path)
+		void WriteForBlockDevice(string path)
 		{
 			if (!System.IO.Directory.Exists(path))
 			{
@@ -37,7 +123,7 @@ namespace Compiler
 			System.IO.BinaryWriter blockWriter = new System.IO.BinaryWriter(block);
 
 			int blockSize = 4096;
-			int blockCount = codeStream.Count / blockSize + 1; // Plus one due to rounding down
+			int blockCount = m_codeStream.Count / blockSize + 1; // Plus one due to rounding down
 			blockWriter.Write(blockCount);
 
 			for(int val = 1; val < blockSize; val++)
@@ -56,9 +142,9 @@ namespace Compiler
 				{
 					int codeIndex = codeBlock * blockSize + indexWithinBlock;
 
-					if(codeIndex < codeStream.Count)
+					if (codeIndex < m_codeStream.Count)
 					{
-						blockWriter.Write(codeStream[codeIndex]);
+						blockWriter.Write(m_codeStream[codeIndex]);
 					}
 					else
 					{
