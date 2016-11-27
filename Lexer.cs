@@ -57,6 +57,12 @@ namespace Compiler
 						{
 							tokens.Add(new Token() { type = TokenType.Integer, data = input[i].ToString() });
 						}
+                        else if (input[i] != ' ')
+                        {
+                            Console.WriteLine("Error, invalid character \"" + input[i] + "\" in input.  Press any key to quit.");
+                            Console.ReadKey();
+                            return null;
+                        }
 						break;
 				}
 			}

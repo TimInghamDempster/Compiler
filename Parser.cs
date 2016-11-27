@@ -27,26 +27,21 @@ namespace Compiler
 	class Parser
 	{
 		List<Token> m_tokenStream;
-		Token m_nextToken;
-		Token m_currentToken;
 		int m_tokenIndex;
 
 		public bool Parse(List<Token> tokenStream, SyntaxNode programNode)
 		{
 			m_tokenStream = tokenStream;
-			// Assumes non-empty token stream
-			m_currentToken = tokenStream[0];
-			m_nextToken = tokenStream[1];
 
-			bool expressionParsed = ParseExpression(programNode);
+			bool expressionParsed = ParseExpression(programNode, 0);
 
-			if(expressionParsed && m_nextToken == null)
+			if(expressionParsed && m_tokenIndex + 1 == m_tokenStream.Count)
 			{
 				return true;
 			}
 			else
 			{
-				if(m_nextToken != null)
+                if (m_tokenStream[m_tokenIndex + 1] != null)
 				{
 					Console.WriteLine("Error: code after main expression");
 				}
@@ -54,51 +49,65 @@ namespace Compiler
 			}
 		}
 
-		bool ParseExpression(SyntaxNode parent)
+		bool ParseExpression(SyntaxNode parent, int minimumPrecedence)
 		{
 			SyntaxNode expressionNode = new SyntaxNode();
 			expressionNode.m_type = ASTType.Expression;
 			
 			if(ParsePrimitive(expressionNode))
 			{
-				while(m_nextToken != null)
-				{
-					if(!ParseBinaryOperator(expressionNode))
-					{
-						parent.m_children.Add(expressionNode);
-						return true;
-					}
-					else
-					{
-						if(!ParsePrimitive(expressionNode))
-						{
-							Console.WriteLine("Error: binary operator with no second argument");
-							return false;
-						}
-					}
-				}
-				parent.m_children.Add(expressionNode);
-				return true;
+                while (GetPrecedence() >= minimumPrecedence)
+                {
+                    int nextPrecedence = GetPrecedence() + 1;
+                    ParseBinaryOperator(expressionNode);
+
+                    ParseExpression(expressionNode, nextPrecedence);
+                }
 			}
-			return false;
+            if (expressionNode.m_children.Count > 1)
+            {
+                parent.m_children.Add(expressionNode);
+            }
+            else
+            {
+                parent.m_children.Add(expressionNode.m_children[0]);
+            }
+			return true;
 		}
+
+        int GetPrecedence()
+        {
+            switch (m_tokenStream[m_tokenIndex].type)
+            {
+                case TokenType.Plus:
+                    {
+                        return 1;
+                    } break;
+                case TokenType.Minus:
+                    {
+                        return 1;
+                    } break;
+                case TokenType.Multiply:
+                    {
+                        return 2;
+                    } break;
+                case TokenType.Divide:
+                    {
+                        return 2;
+                    } break;
+                default:
+                    {
+                        return -1;
+                    } break;
+            }
+        }
 
 		void AdvanceToken()
 		{
-			if(m_tokenIndex + 1 < m_tokenStream.Count)
-			{
-				m_tokenIndex++;
-				m_currentToken = m_nextToken;
-
-				if(m_tokenIndex + 1 < m_tokenStream.Count)
-				{
-					m_nextToken = m_tokenStream[m_tokenIndex + 1];
-				}
-				else
-				{
-					m_nextToken = null;
-				}
-			}
+            if (m_tokenIndex + 1 < m_tokenStream.Count)
+            {
+                m_tokenIndex++;
+            }
 		}
 
 		bool ParsePrimitive(SyntaxNode parent)
@@ -106,22 +115,22 @@ namespace Compiler
 			SyntaxNode primitiveNode = new SyntaxNode();
 			primitiveNode.m_type = ASTType.Primitive;
 
-			if(m_currentToken.type == TokenType.Integer)
+            if (m_tokenStream[m_tokenIndex].type == TokenType.Integer)
 			{
 				parent.m_children.Add(primitiveNode);
-				primitiveNode.m_data = m_currentToken.data;
+                primitiveNode.m_data = m_tokenStream[m_tokenIndex].data;
 				AdvanceToken();
 				return true;
 			}
-			else if(m_currentToken.type == TokenType.OpenPerenthesis)
+            else if (m_tokenStream[m_tokenIndex].type == TokenType.OpenPerenthesis)
 			{
 				AdvanceToken();
-				if(ParseExpression(primitiveNode))
+				if(ParseExpression(parent, 0))
 				{
-					if(m_currentToken.type == TokenType.ClosePerenthesis)
+                    if (m_tokenStream[m_tokenIndex].type == TokenType.ClosePerenthesis)
 					{
 						AdvanceToken();
-						parent.m_children.Add(primitiveNode);
+						//parent.m_children.Add(primitiveNode);
 						return true;
 					}
 					else
@@ -137,7 +146,7 @@ namespace Compiler
 			}
 			else if(ParseUnaryOperator(primitiveNode))
 			{
-				parent.m_children.Add(primitiveNode);
+				parent.m_children.Add(primitiveNode.m_children[0]);
 				return true;
 			}
 			else
@@ -148,7 +157,7 @@ namespace Compiler
 
 		bool ParseUnaryOperator(SyntaxNode parent)
 		{
-			if(m_currentToken.type == TokenType.Minus)
+            if (m_tokenStream[m_tokenIndex].type == TokenType.Minus)
 			{
 				SyntaxNode minusNode = new SyntaxNode();
 				minusNode.m_type = ASTType.UnaryMinus;
@@ -158,6 +167,7 @@ namespace Compiler
 				if(!ParsePrimitive(minusNode))
 				{
 					Console.WriteLine("Error: Unary minus with no argument");
+                    return false;
 				}
 				
 				return true;
@@ -169,7 +179,7 @@ namespace Compiler
 		{
 			SyntaxNode binaryNode = new SyntaxNode();
 
-			switch(m_currentToken.type)
+            switch (m_tokenStream[m_tokenIndex].type)
 			{
 				case TokenType.Plus:
 				{

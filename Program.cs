@@ -18,12 +18,15 @@ namespace Compiler
 
 			List<Token> tokenStream = m_lexer.Lex(code);
 
-			SyntaxNode abstractSyntaxTree = new SyntaxNode();
-			bool parsed = m_parser.Parse(tokenStream, abstractSyntaxTree);
+            if (tokenStream != null)
+            {
+                SyntaxNode abstractSyntaxTree = new SyntaxNode();
+                bool parsed = m_parser.Parse(tokenStream, abstractSyntaxTree);
 
-			m_codeGenerator.GenerateCode(abstractSyntaxTree, @"MainDrive");
+                m_codeGenerator.GenerateCode(abstractSyntaxTree, @"MainDrive");
 
-			System.Diagnostics.Process proc = System.Diagnostics.Process.Start(@"..\..\..\..\Virutal Machine\bin\Release\Virutal Machine.exe");
+                //System.Diagnostics.Process proc = System.Diagnostics.Process.Start(@"..\..\..\..\Virutal Machine\bin\Release\Virutal Machine.exe");
+            }
 		}
 	}
 }
